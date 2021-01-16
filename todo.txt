@@ -1,0 +1,4 @@
+Opens with a page that has a list
+and a plus button and done button
+plus button opens textbox to enter
+a name. done button closes page

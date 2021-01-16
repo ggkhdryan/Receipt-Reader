@@ -20,7 +20,7 @@ def mapp(h):
 
 
 
-img = cv2.imread('files/InkedInkedIMG_2127_LI.jpg')
+img = cv2.imread('files/unnamed.jpg')
 img = cv2.resize(img,(500,800)) #make image smaller
 
 
@@ -38,7 +38,7 @@ max_area = 0
 for c in contours:
     area = cv2.contourArea(c)
     p = cv2.arcLength(c,True)
-    approx = cv2.approxPolyDP(c,0.02*p,True)
+    approx = cv2.approxPolyDP(c,0.04*p,True)
     if area>max_area and len(approx)==4:
         target = approx
         max_area = area
