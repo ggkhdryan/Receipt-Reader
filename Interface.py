@@ -20,10 +20,9 @@ class Names(Frame):
     def deleteFromList(self, event):
         self.list_of_names.delete(ANCHOR)
 
+    # pass list to next window
     def nextPressed(self):
-        Payment(self.master)
-        #self.pay = Toplevel(Payment(self.master))
-        #self.pay.mainloop()
+        Payment(self.master, self.list_of_names)
         self.master.withdraw()
 
     def create_widgets(self):
@@ -57,16 +56,20 @@ class Names(Frame):
         self.next_button.place(x=215, y=225)
 
 class Payment(Toplevel):
-    def __init__(self, master):
-        super().__init__(master)
+    def __init__(self, list_of_names):
+        #super().__init__(master)
         #self.pack()
         #self.create_widgets()
         self.title("Carl")
         self.geometry("500x250")
         self.resizable(0,0)
+        self.list_box = Listbox(self)
+        self.list_box.pack()
+        for name in list_of_names.get(0,END):
+            #print(name)
+            self.list_box.insert(name)
 
-        self.list1 = Names.list_of_names
-        print(list1.get(0,END))
+        #print(type(list_of_names.get(0,END)[1]))
 
 root = Tk()
 app = Names(root)
