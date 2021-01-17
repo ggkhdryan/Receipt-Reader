@@ -22,8 +22,12 @@ class Names(Frame):
 
     # pass list to next window
     def nextPressed(self):
-        Payment(self.master, self.list_of_names)
-        self.master.withdraw()
+        if self.list_of_names.size() == 0:
+            self.error_label["text"] = "Please add atleast 1 person!"
+        else:
+            Payment(self.master, self.list_of_names)
+            self.master.withdraw()
+            self.error_label["text"] = ""
 
     def textErase(self, event):
         self.current = self.entry_box.get()
@@ -59,7 +63,9 @@ class Names(Frame):
 
         # create next button
         self.next_button = Button(text="Next", command=self.nextPressed)
-        self.next_button.place(x=215, y=225)
+        self.next_button.place(x=210, y=220)
+        self.error_label = Label()
+        self.error_label.place(x=50, y=220)
 
 class Payment(Toplevel):
     def __init__(self, master, list_of_names):
@@ -70,7 +76,7 @@ class Payment(Toplevel):
         self.createWidgets(list_of_names)
     
     # update total dues in listbox
-    def updateTotals(self):
+    def updateTotal(self):
         try:
             self.name,self.index = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], self.people_listbox.curselection()[0]
             self.people_listbox.delete(self.people_listbox.curselection()[0])
@@ -101,17 +107,24 @@ class Payment(Toplevel):
             except IndexError:
                 self.item_listbox.delete(0,END)
                 self.error_label["text"] = "Please select a person on the left!"
-        self.updateTotals()
+        self.updateTotal()
 
     # delete item from list
     def deleteItem(self,event):
         self.item_name = self.item_listbox.get(ANCHOR)
         self.item_listbox.delete(ANCHOR)
-        for item in self.item_dict[self.people_listbox.curselection()[0]]:
-            if item == self.item_name:
-                self.item_dict[self.people_listbox.curselection()[0]].remove(item)
-        self.updateItems()
-                
+        try:
+            for i,item in enumerate(self.item_dict[self.people_listbox.curselection()[0]]):
+                if item == self.item_name:
+                    self.item_dict[self.people_listbox.curselection()[0]] = self.item_dict[self.people_listbox.curselection()[0]][:i] + self.item_dict[self.people_listbox.curselection()[0]][i+1:]
+            self.error_label["text"] = ""
+            self.name,self.price = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], float(self.item_name.split('$')[1])
+            self.dues[self.name] -= (self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100)) 
+            self.updateItems(None)
+            self.updateTotal()
+        except IndexError:
+            self.error_label["text"] = "Please select a person on the left!"
+        
 
     def createWidgets(self, list_of_names):
         # create people listbox
