@@ -4,7 +4,7 @@ class Names(Frame):
     def __init__(self, master):
         super().__init__(master)
         self.pack()
-        self.create_widgets()
+        self.createWidgets()
         self.master.title("People")
         self.master.geometry("250x250")
         self.master.resizable(0,0)
@@ -25,7 +25,12 @@ class Names(Frame):
         Payment(self.master, self.list_of_names)
         self.master.withdraw()
 
-    def create_widgets(self):
+    def textErase(self, event):
+        self.current = self.entry_box.get()
+        if self.current == "Put Name Here":
+            self.entry_box.delete(0,END)
+
+    def createWidgets(self):
         # create listbox
         self.list_of_names = Listbox()
         self.list_of_names.pack()
@@ -38,6 +43,7 @@ class Names(Frame):
         self.contents = StringVar()
         self.contents.set("Put Name Here")
         self.entry_box["textvariable"] = self.contents
+        self.entry_box.bind("<FocusIn>", self.textErase)
 
         # create insert button and binds
         self.insert_button = Button(text="Insert Name")
@@ -56,20 +62,119 @@ class Names(Frame):
         self.next_button.place(x=215, y=225)
 
 class Payment(Toplevel):
-    def __init__(self, list_of_names):
-        #super().__init__(master)
-        #self.pack()
-        #self.create_widgets()
+    def __init__(self, master, list_of_names):
+        super().__init__(master)
         self.title("Carl")
-        self.geometry("500x250")
+        self.geometry("1200x800")
         self.resizable(0,0)
-        self.list_box = Listbox(self)
-        self.list_box.pack()
-        for name in list_of_names.get(0,END):
-            #print(name)
-            self.list_box.insert(name)
+        self.createWidgets(list_of_names)
+    
+    # update total dues in listbox
+    def updateTotals(self):
+        try:
+            self.name,self.index = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], self.people_listbox.curselection()[0]
+            self.people_listbox.delete(self.people_listbox.curselection()[0])
+            self.people_listbox.insert(self.index, self.name+" -- $"+str(self.dues[self.name]))
+        except IndexError:
+            return
 
-        #print(type(list_of_names.get(0,END)[1]))
+    # update items based on person
+    def updateItems(self,event):
+        self.item_listbox.delete(0,END)
+        try:
+            if self.people_listbox.curselection()[0] in self.item_dict:
+                for item in self.item_dict[self.people_listbox.curselection()[0]]:
+                    self.item_listbox.insert(END,item)
+        except IndexError:
+            return
+    # add item to list
+    def addItem(self,event):
+        if self.item_name_entry.get().isspace() or not self.item_name_entry.get() or self.item_price_entry.get().isspace() or not self.item_price_entry.get():
+            self.error_label["text"] = "Please enter both item name and price!"
+        else:
+            try:
+                self.item_listbox.insert(END, self.item_name_entry.get()+"  --  $"+self.item_price_entry.get())
+                self.error_label["text"] = ""
+                self.item_dict[self.people_listbox.curselection()[0]] = self.item_listbox.get(0,END)
+                self.name, self.price = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], float(self.item_listbox.get(END).split('$')[1])
+                self.dues[self.name] += (self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100))
+            except IndexError:
+                self.item_listbox.delete(0,END)
+                self.error_label["text"] = "Please select a person on the left!"
+        self.updateTotals()
+
+    # delete item from list
+    def deleteItem(self,event):
+        self.item_name = self.item_listbox.get(ANCHOR)
+        self.item_listbox.delete(ANCHOR)
+        for item in self.item_dict[self.people_listbox.curselection()[0]]:
+            if item == self.item_name:
+                self.item_dict[self.people_listbox.curselection()[0]].remove(item)
+        self.updateItems()
+                
+
+    def createWidgets(self, list_of_names):
+        # create people listbox
+        self.people_listbox = Listbox(self, exportselection=False)
+        self.people_listbox.place(x=0,y=22)
+        self.dues = {}
+        for name in list_of_names.get(0,END):
+            self.dues[name] = 0
+            self.people_listbox.insert(END, name + " -- $" + str(self.dues[name]))
+        
+        # create people text
+        self.people_label = Label(self, text="People")
+        self.people_label.place(x=35, y=0)
+
+        # create tax rate and tip widgets
+        self.tax_label = Label(self, text="Tax Rate")
+        self.tax_label.place(x=35, y=200)
+        self.tax_var = StringVar(self)
+        self.tax_var.set("9.75")
+        self.tax_entry_box = Entry(self, text=self.tax_var)
+        self.tax_entry_box.place(x=0, y=225)
+        self.tip_label = Label(self, text="Tip Percentage")
+        self.tip_label.place(x=17, y=255)
+        self.tip_var = StringVar(self)
+        self.tip_var.set("0")
+        self.tip_entry_box = Entry(self, text=self.tip_var)
+        self.tip_entry_box.place(x=0, y=280)
+        self.tax_perc = Label(self,text="%")
+        self.tax_perc.place(x=115, y=225)
+        self.tip_perc = Label(self,text="%")
+        self.tip_perc.place(x=115, y=280)
+
+        # create items listbox
+        self.items_label = Label(self, text="Items")
+        self.items_label.place(x=260, y=0)
+        self.item_listbox = Listbox(self, exportselection=False)
+        self.item_listbox.place(x=220,y=22)
+        self.item_name_label = Label(self, text="Item Name")
+        self.item_name_label.place(x=400, y=35)
+        self.item_name_entry = Entry(self)
+        self.item_name_entry.place(x=370, y=55)
+        self.item_price_label = Label(self, text="Item Price")
+        self.item_price_label.place(x=400, y=85)
+        self.dollar_sign = Label(self, text="$")
+        self.dollar_sign.place(x=360, y=105)
+        self.item_price_entry = Entry(self)
+        self.item_price_entry.place(x=370, y=105)
+        self.item_add_button = Button(self,text="Add")
+        self.item_add_button.place(x=435, y=140)
+        self.item_delete_button = Button(self,text="Delete")
+        self.item_delete_button.place(x=390, y=140)
+
+        # add and delete item config
+        self.item_name_entry.bind("<Return>", self.addItem)
+        self.item_add_button.bind("<Button-1>", self.addItem)
+        self.error_label = Label(self)
+        self.error_label.place(x=355, y=170)
+        self.item_listbox.bind("<Delete>", self.deleteItem)
+        self.item_delete_button.bind("<Button-1>", self.deleteItem)
+
+        # people listbox select config
+        self.item_dict = {}
+        self.people_listbox.bind("<<ListboxSelect>>", self.updateItems)
 
 root = Tk()
 app = Names(root)
