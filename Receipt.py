@@ -20,9 +20,8 @@ def mapp(h):
 
 
 
-img = cv2.imread('files/unnamed.jpg')
+img = cv2.imread('files/1.jpg')
 img = cv2.resize(img,(500,800)) #make image smaller
-
 
 gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) #make image grayscale
 orig = gray.copy()

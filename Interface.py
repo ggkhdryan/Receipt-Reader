@@ -1,4 +1,8 @@
 from tkinter import *
+from venmo_api import Client
+
+#access_token = Client.get_access_token(username='georgekhdryan41@gmail.com', password='king1998')
+venmo = Client(access_token='bc5d62e4b9e46ce8b930cd42d2880e1f2b8afbd473345bc1329d80fc958faccf')
 
 class Names(Frame):
     def __init__(self, master):
@@ -71,7 +75,7 @@ class Payment(Toplevel):
     def __init__(self, master, list_of_names):
         super().__init__(master)
         self.title("Carl")
-        self.geometry("1200x800")
+        self.geometry("600x500")
         self.resizable(0,0)
         self.createWidgets(list_of_names)
     
@@ -103,7 +107,7 @@ class Payment(Toplevel):
                 self.error_label["text"] = ""
                 self.item_dict[self.people_listbox.curselection()[0]] = self.item_listbox.get(0,END)
                 self.name, self.price = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], float(self.item_listbox.get(END).split('$')[1])
-                self.dues[self.name] += (self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100))
+                self.dues[self.name] += round((self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100)),2)
             except IndexError:
                 self.item_listbox.delete(0,END)
                 self.error_label["text"] = "Please select a person on the left!"
@@ -119,12 +123,59 @@ class Payment(Toplevel):
                     self.item_dict[self.people_listbox.curselection()[0]] = self.item_dict[self.people_listbox.curselection()[0]][:i] + self.item_dict[self.people_listbox.curselection()[0]][i+1:]
             self.error_label["text"] = ""
             self.name,self.price = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0], float(self.item_name.split('$')[1])
-            self.dues[self.name] -= (self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100)) 
+            self.dues[self.name] -= round((self.price + (self.price*float(self.tax_entry_box.get())/100) + (self.price*float(self.tip_entry_box.get())/100)),2) 
             self.updateItems(None)
             self.updateTotal()
         except IndexError:
             self.error_label["text"] = "Please select a person on the left!"
-        
+
+    # search for venmo users 
+    def venmoSearch(self, event):
+        self.venmo_listbox.delete(0,END)
+        self.venmo_list.clear()
+        self.users = venmo.user.search_for_users(query=self.venmo_entry.get())
+        for user in self.users:
+            self.venmo_listbox.insert(END, user.username)
+            self.venmo_list.append(user)
+    
+    # add venmo user to coresponding person
+    def addVenmoUser(self):
+        try:
+            self.venmo_error['text'] = ""
+            self.name = self.people_listbox.get(self.people_listbox.curselection()[0]).split()[0]
+            self.id = ''
+            for user in self.venmo_list:
+                if self.venmo_listbox.get(self.venmo_listbox.curselection()[0]) == user.username:
+                    self.id = user.id
+            self.venmo_dict[self.name] = self.id
+        except IndexError:
+            self.venmo_error['text'] = "Please select a user to add this venmo account to!"
+    
+    # send out venmo requests
+    def sendVenmoRequests(self):
+        if len(self.people_listbox.get(0,END)) != len(self.venmo_dict):
+            self.select_error['text'] = "Please select a venmo account for each person"
+            return
+        self.list1=list(self.venmo_dict.values())
+        self.select_error['text'] = ""
+        while self.list1:
+            self.name = ""
+            self.id = ""
+            self.price = 0.0
+            for name in self.venmo_dict:
+                if self.venmo_dict[name] == self.list1[0]:
+                    self.name = name
+                    self.id = self.list1.pop(0)
+                    break
+            for names in self.people_listbox.get(0,END):
+                if names.split()[0] == self.name:
+                    self.price = round(float(names.split('$')[1]),2)
+            venmo.payment.request_money(self.price, "test1", self.id)
+            self.success_label['text'] = "Request(s) sent successfully!"
+    
+    # quit app
+    def quitApp(self):
+        self.quit()
 
     def createWidgets(self, list_of_names):
         # create people listbox
@@ -160,7 +211,7 @@ class Payment(Toplevel):
         # create items listbox
         self.items_label = Label(self, text="Items")
         self.items_label.place(x=260, y=0)
-        self.item_listbox = Listbox(self, exportselection=False)
+        self.item_listbox = Listbox(self)
         self.item_listbox.place(x=220,y=22)
         self.item_name_label = Label(self, text="Item Name")
         self.item_name_label.place(x=400, y=35)
@@ -188,6 +239,33 @@ class Payment(Toplevel):
         # people listbox select config
         self.item_dict = {}
         self.people_listbox.bind("<<ListboxSelect>>", self.updateItems)
+
+        # create venmo users area
+        self.venmo_label = Label(self, text="Venmo Users")
+        self.venmo_label.place(x=245, y=200)
+        self.venmo_listbox = Listbox(self)
+        self.venmo_listbox.place(x=220,y=222)
+        self.venmo_entry = Entry(self)
+        self.venmo_entry.place(x=220, y=400)
+        self.venmo_search_button = Button(self, text="Search")
+        self.venmo_search_button.place(x=298, y=422)
+        self.venmo_entry.bind("<Return>", self.venmoSearch)
+        self.venmo_search_button.bind("<Button-1>", self.venmoSearch)
+        self.venmo_add_button = Button(self, text="Add to Person", command=self.addVenmoUser)
+        self.venmo_add_button.place(x=350, y=225)
+        self.venmo_error = Label(self)
+        self.venmo_error.place(x=350, y=255)
+        self.venmo_list = []
+        self.venmo_dict = {}
+        self.send_button = Button(self, text="Send Request(s)", command=self.sendVenmoRequests)
+        self.send_button.place(x=485, y=430)
+        self.success_label = Label(self,text="")
+        self.success_label.place(x=450, y=405)
+        self.select_error = Label(self)
+        self.select_error.place(x=350, y=405)
+        self.quit_button = Button(self, text="Quit", command=self.quitApp)
+        self.quit_button.place(x=450, y=430)
+        
 
 root = Tk()
 app = Names(root)
